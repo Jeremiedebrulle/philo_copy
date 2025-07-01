@@ -1,0 +1,251 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/27 16:02:35 by jdebrull          #+#    #+#             */
+/*   Updated: 2025/07/01 16:50:10 by jdebrull         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "../includes/philo.h"
+
+long	ft_atol_philo(char *str)
+{
+	int		i;
+	long	num;
+
+	i = 0;
+	num = 0;
+	if (!str)
+		exit_error("Error void string");
+	while ((str[i] >= 9 && str[i] <= 13) || str[i] == 32)
+		i++;
+	if (str[i] == '+')
+		i++;
+	else if (str[i] == '-')
+		exit_error("Number is not positive.");
+	while (str[i] >= '0' && str[i] <= '9')
+	{
+		num = (num * 10) + (str[i] - 48);
+		if (num > 2147483647)
+			exit_error("Number is to big.");
+		i++;
+	}
+	if (num == 0)
+		exit_error("Error arguments try ./philo nb_philo time_die time_eat time_sleep [nb_of_meals]");
+	return (num);
+}
+
+void	table_init(t_table *table, char **av) // need to check later why it still works when i write /philo 5.5 40.0 ... as input 
+{
+	table->nb_philo = ft_atol_philo(av[1]);
+	table->time_to_die = ft_atol_philo(av[2]);
+	table->time_to_eat = ft_atol_philo(av[3]);
+	table->time_to_sleep = ft_atol_philo(av[4]);
+	if (av[5])
+		table->nb_of_meals = ft_atol_philo(av[5]);
+	else
+		table->nb_of_meals = -1;
+	table->start_sim = 0;
+	table->philo = NULL;
+}
+
+t_philo	*philo_init(t_table *table, int id)
+{
+	t_philo	*philo;
+
+	philo = malloc(sizeof(t_philo));
+	if (!philo)
+		return (NULL);
+	philo->philo_id = id;
+	philo->left_fork = &table->forks[id - 1];
+	philo->right_fork = 0;
+	philo->table = table;
+	philo->next = NULL;
+	philo->time_last_meal = 0;
+	return (philo);
+}
+
+t_philo	*create_philos(t_table *table, int count)
+{
+	int		i;
+	t_philo	*head;
+	t_philo	*curr;
+	t_philo	*new;
+
+	head = NULL;
+	curr = NULL;
+	i = 0;
+	while (i < count)
+	{
+		new = philo_init(table, (i + 1));
+		if (!new)
+			return (NULL);
+		if (!head)
+		{
+			head = new;
+			curr = head;
+		}
+		else
+		{
+			curr->next = new;
+			curr = new;
+		}
+		i++;
+	}
+	return (head);
+}
+
+void	take_forks(t_philo *philo)
+{
+	if ((philo->philo_id % 2) == 0)
+	{
+		pthread_mutex_lock(&philo->left_fork);
+		printf("%ld %d has taken a fork\n", get_time() - philo->table->start_sim, philo->philo_id);
+		pthread_mutex_lock(&philo->right_fork);
+		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
+	}
+	else
+	{
+		ft_usleep(table->time_to_eat * 0.9);
+		pthread_mutex_lock(&table->forks[philo->left_fork]);
+		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
+		pthread_mutex_lock(&table->forks[philo->right_fork]);
+		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
+	}
+}
+
+void	eating_sleeping(t_philo *philo)
+{
+	t_table	*table;
+	long	now;
+
+	table = philo->table;
+	now = get_time();
+	printf("%ld %d is eating\n", now - table->start_sim, philo->philo_id);
+	philo->time_last_meal = now;
+	ft_usleep(table->time_to_eat);
+	pthread_mutex_unlock(&table->forks[philo->left_fork]);
+	pthread_mutex_unlock(&table->forks[philo->right_fork]);
+	ft_usleep(table->time_to_sleep);
+	printf("%ld %d is sleeping\n", get_time() - table->start_sim, philo->philo_id);
+}
+
+void	*routine(void *arg)
+{
+	t_philo	*philo = (t_philo *)arg;
+
+	printf("Philo %d started\n", philo->philo_id);
+	while (1)
+	{
+		take_forks(philo);
+		eating_sleeping(philo);
+	}
+	return (NULL);
+}
+
+void	init_forks(t_philo *philo, int count)
+{
+	int		i;
+	t_philo *tmp;
+	
+	i = 0;
+	tmp = philo;
+	while (i < count && tmp)
+	{
+		pthread_mutex_init(&tmp->table->forks[i], NULL);
+		tmp = tmp->next;
+		i++;
+	}
+}
+/* 
+void	assign_forks(t_philo *philo, int count)
+{
+	int		i;
+	t_philo	*tmp;
+
+	i = 0;
+	tmp = philo;
+	while (i < count && tmp)
+	{
+		tmp->right_fork = i;
+		tmp->left_fork = (i + 1) % count;
+		printf("Philo %d: left = %d, right = %d\n", tmp->philo_id, tmp->left_fork, tmp->right_fork);
+		tmp = tmp->next;
+		i++;
+	}
+} */
+
+void	time_last_meal(t_philo *philo)
+{
+	t_philo	*tmp;
+
+	tmp = philo;
+	while(tmp)
+	{
+		philo->time_last_meal = philo->table->start_sim;
+		tmp = tmp->next;
+	}
+}
+
+/* int	monitor_death(t_table *table)
+{
+	t_philo *philo;
+
+	philo = table->philo;
+	while (philo)
+	{
+		philo = philo
+	}
+} */
+
+void	dinner_sim(t_table *table)
+{
+	int		i;
+	t_philo	*philo;
+
+	i = 0;
+	table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
+	if (!table->forks)
+		exit(1);
+	init_forks(philo, table->nb_philo);
+	philo = create_philos(table ,table->nb_philo);
+	if (!philo)
+		printf("create philo failed!\n");
+	//assign_forks(philo, table->nb_philo);
+	table->start_sim = get_time();
+	time_last_meal(philo);
+	t_philo *tmp = philo;
+	tmp = philo;
+	while (tmp)
+	{
+		tmp->right_fork = tmp->next->left_fork;
+		if (pthread_create(&tmp->philo_thread, NULL, &routine, tmp) != 0)
+    		perror("pthread_create failed");
+		tmp = tmp->next;
+	}
+	/* if (pthread_create(&table->monitor_death, NULL, &monitor_death, table))
+   		perror("pthread_create failed"); */
+	tmp = philo;
+	while (tmp)
+	{
+		pthread_join(tmp->philo_thread, NULL);
+		tmp = tmp->next;
+	}
+}
+
+int	main(int ac, char **av)
+{
+	t_table	table;
+
+	if (ac != 5 && ac != 6)
+		return (printf("not the right number of args\n Try with number_of_philosophers time_to_die time_to_eat time_to_sleep [number_of_times_each_philosopher_must_eat]\n"), 0);
+	else
+	{
+		table_init(&table, av);
+		dinner_sim(&table);
+	}
+}
