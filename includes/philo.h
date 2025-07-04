@@ -6,7 +6,7 @@
 /*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/27 16:01:18 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/01 16:41:17 by jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/04 16:22:27 by jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,9 +25,11 @@
 typedef struct s_philo
 {
 	int				philo_id;
+	pthread_mutex_t	philo_lock;
 	pthread_t		philo_thread;
 	pthread_mutex_t	*left_fork;
 	pthread_mutex_t	*right_fork;
+	int				meals_count;
 	long			time_last_meal;
 	struct s_table	*table;
 	struct s_philo	*next;
@@ -40,9 +42,11 @@ typedef struct s_table
 	int				time_to_eat;
 	int				time_to_sleep;
 	int				nb_of_meals;
+	int				death;
 	long			start_sim;
+	pthread_mutex_t	table_lock;
 	pthread_mutex_t	*forks;
-	pthread_t		*monitor_death;
+	pthread_t		monitor_death;
 	t_philo			*philo;
 }					t_table;
 

@@ -6,7 +6,7 @@
 /*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/27 16:02:35 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/01 16:50:10 by jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/04 16:36:33 by jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,8 +49,22 @@ void	table_init(t_table *table, char **av) // need to check later why it still w
 		table->nb_of_meals = ft_atol_philo(av[5]);
 	else
 		table->nb_of_meals = -1;
+	table->death = 0;
 	table->start_sim = 0;
 	table->philo = NULL;
+	pthread_mutex_init(&table->table_lock, NULL);
+}
+
+void	init_forks(t_table *table, int count)
+{
+	int		i;
+
+	i = 0;
+	while (i < count)
+	{
+		pthread_mutex_init(&table->forks[i], NULL);
+		i++;
+	}
 }
 
 t_philo	*philo_init(t_table *table, int id)
@@ -61,6 +75,7 @@ t_philo	*philo_init(t_table *table, int id)
 	if (!philo)
 		return (NULL);
 	philo->philo_id = id;
+	pthread_mutex_init(&philo->philo_lock, NULL);
 	philo->left_fork = &table->forks[id - 1];
 	philo->right_fork = 0;
 	philo->table = table;
@@ -101,19 +116,22 @@ t_philo	*create_philos(t_table *table, int count)
 
 void	take_forks(t_philo *philo)
 {
-	if ((philo->philo_id % 2) == 0)
+	t_table	*table;
+
+	table = philo->table;
+	if (philo->left_fork < philo->right_fork)
 	{
-		pthread_mutex_lock(&philo->left_fork);
+		pthread_mutex_lock(philo->left_fork);
 		printf("%ld %d has taken a fork\n", get_time() - philo->table->start_sim, philo->philo_id);
-		pthread_mutex_lock(&philo->right_fork);
+		pthread_mutex_lock(philo->right_fork);
 		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
 	}
 	else
 	{
 		ft_usleep(table->time_to_eat * 0.9);
-		pthread_mutex_lock(&table->forks[philo->left_fork]);
+		pthread_mutex_lock(philo->right_fork);
 		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
-		pthread_mutex_lock(&table->forks[philo->right_fork]);
+		pthread_mutex_lock(philo->left_fork);
 		printf("%ld %d has taken a fork\n", get_time() - table->start_sim, philo->philo_id);
 	}
 }
@@ -126,58 +144,42 @@ void	eating_sleeping(t_philo *philo)
 	table = philo->table;
 	now = get_time();
 	printf("%ld %d is eating\n", now - table->start_sim, philo->philo_id);
+	pthread_mutex_lock(&philo->philo_lock);
 	philo->time_last_meal = now;
 	ft_usleep(table->time_to_eat);
-	pthread_mutex_unlock(&table->forks[philo->left_fork]);
-	pthread_mutex_unlock(&table->forks[philo->right_fork]);
+	philo->meals_count++;
+	pthread_mutex_unlock(&philo->philo_lock);
+	pthread_mutex_unlock(philo->left_fork);
+	pthread_mutex_unlock(philo->right_fork);
 	ft_usleep(table->time_to_sleep);
 	printf("%ld %d is sleeping\n", get_time() - table->start_sim, philo->philo_id);
 }
 
 void	*routine(void *arg)
 {
-	t_philo	*philo = (t_philo *)arg;
+	t_philo	*philo;
+	int		dead;
 
+	philo = (t_philo *)arg;
+	pthread_mutex_lock(&philo->table->table_lock);
+	dead = philo->table->death;
+	pthread_mutex_unlock(&philo->table->table_lock);
 	printf("Philo %d started\n", philo->philo_id);
 	while (1)
 	{
+		pthread_mutex_lock(&philo->table->table_lock);
+		if (dead)
+		{
+			pthread_mutex_unlock(&philo->table->table_lock);
+			break ;
+		}
+		pthread_mutex_unlock(&philo->table->table_lock);
 		take_forks(philo);
 		eating_sleeping(philo);
+		
 	}
 	return (NULL);
 }
-
-void	init_forks(t_philo *philo, int count)
-{
-	int		i;
-	t_philo *tmp;
-	
-	i = 0;
-	tmp = philo;
-	while (i < count && tmp)
-	{
-		pthread_mutex_init(&tmp->table->forks[i], NULL);
-		tmp = tmp->next;
-		i++;
-	}
-}
-/* 
-void	assign_forks(t_philo *philo, int count)
-{
-	int		i;
-	t_philo	*tmp;
-
-	i = 0;
-	tmp = philo;
-	while (i < count && tmp)
-	{
-		tmp->right_fork = i;
-		tmp->left_fork = (i + 1) % count;
-		printf("Philo %d: left = %d, right = %d\n", tmp->philo_id, tmp->left_fork, tmp->right_fork);
-		tmp = tmp->next;
-		i++;
-	}
-} */
 
 void	time_last_meal(t_philo *philo)
 {
@@ -191,44 +193,107 @@ void	time_last_meal(t_philo *philo)
 	}
 }
 
-/* int	monitor_death(t_table *table)
+int	philo_died(t_philo *philo)
 {
-	t_philo *philo;
+	long	now;
+	long	last_meal;
 
-	philo = table->philo;
+	if (!philo)
+		return (0);
+	now = 0;
+	pthread_mutex_lock(&philo->philo_lock);
+	last_meal = philo->time_last_meal;
+	pthread_mutex_unlock(&philo->philo_lock);
 	while (philo)
 	{
-		philo = philo
+		now = get_time();
+		if (now - last_meal > philo->table->time_to_die)
+			return (1);
+		philo = philo->next;
 	}
-} */
+	return (0);
+}
+
+int	philo_full(t_philo *philo)
+{
+	int	meals_max;
+	int	meals_count;
+
+	pthread_mutex_lock(&philo->philo_lock);
+	meals_count = philo->meals_count;
+	pthread_mutex_unlock(&philo->philo_lock);
+	meals_max = philo->table->nb_of_meals;
+	if (!philo || philo->table->nb_of_meals == -1)
+		return (0);
+	while (philo)
+	{
+		if (meals_count == meals_max)
+		{
+			pthread_mutex_lock(&philo->table->table_lock);
+			philo->table->death = 1;
+			pthread_mutex_unlock(&philo->table->table_lock);
+			return (1);
+		}
+		philo = philo->next;
+	}
+	return (0);
+}
+
+void	*monitor_death(void *arg)
+{
+	t_table	*table;
+	t_philo *philo;
+
+	table = (t_table *)arg;
+	philo = table->philo;
+	while (1)
+	{
+		if (philo_died(philo))
+		{
+			printf("%ld %d died\n", get_time() - table->start_sim, philo->philo_id);
+			pthread_mutex_lock(&table->table_lock);
+			table->death = 1;
+			pthread_mutex_unlock(&table->table_lock);
+			break ;
+		}
+		if (philo_full(table->philo))
+		{
+			printf("%ld %d is full\n", get_time() - table->start_sim, philo->philo_id);
+			break ;
+		}
+	}
+	return (NULL);
+}
 
 void	dinner_sim(t_table *table)
 {
-	int		i;
 	t_philo	*philo;
 
-	i = 0;
 	table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
 	if (!table->forks)
 		exit(1);
-	init_forks(philo, table->nb_philo);
 	philo = create_philos(table ,table->nb_philo);
+	table->philo = philo;
+	init_forks(table, table->nb_philo);
 	if (!philo)
 		printf("create philo failed!\n");
-	//assign_forks(philo, table->nb_philo);
 	table->start_sim = get_time();
 	time_last_meal(philo);
 	t_philo *tmp = philo;
 	tmp = philo;
 	while (tmp)
 	{
-		tmp->right_fork = tmp->next->left_fork;
+		if (tmp->next)
+			tmp->right_fork = tmp->next->left_fork;
+		else
+			tmp->right_fork = philo->left_fork;
 		if (pthread_create(&tmp->philo_thread, NULL, &routine, tmp) != 0)
-    		perror("pthread_create failed");
+    		printf("pthread_create failed\n");
 		tmp = tmp->next;
 	}
-	/* if (pthread_create(&table->monitor_death, NULL, &monitor_death, table))
-   		perror("pthread_create failed"); */
+	if (pthread_create(&table->monitor_death, NULL, &monitor_death, table))
+   		printf("pthread_create failed\n");
+	pthread_join(table->monitor_death, NULL);
 	tmp = philo;
 	while (tmp)
 	{
