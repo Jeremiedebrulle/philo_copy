@@ -6,7 +6,7 @@
 /*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/27 16:01:18 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/04 16:22:27 by jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/04 18:19:23 by jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,10 +42,12 @@ typedef struct s_table
 	int				time_to_eat;
 	int				time_to_sleep;
 	int				nb_of_meals;
+	int				full;
 	int				death;
 	long			start_sim;
 	pthread_mutex_t	table_lock;
 	pthread_mutex_t	*forks;
+	pthread_mutex_t	print_lock;
 	pthread_t		monitor_death;
 	t_philo			*philo;
 }					t_table;
@@ -56,6 +58,7 @@ int		pars_input(char **av);
 //UTILS
 void	exit_error(char *str);
 long	get_time(void);
-void	ft_usleep(long	time_ms);
+void	ft_usleep(t_philo *philo, long	time_ms);
+int		check_death(t_philo *philo);
 
 #endif
