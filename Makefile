@@ -3,17 +3,17 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+         #
+#    By: Jdebrull <jdebrull@student.s19.be>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/27 13:10:01 by jdebrull          #+#    #+#              #
-#    Updated: 2025/07/01 13:16:31 by jdebrull         ###   ########.fr        #
+#    Updated: 2025/07/07 22:28:06 by Jdebrull         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 SRCDIR = srcs/
 OBJDIR = objs
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -I./includes -fsanitize=thread
+CFLAGS = -Wall -Wextra -Werror -I./includes #-fsanitize=thread
 
 SRC = 	main.c \
 		utils.c

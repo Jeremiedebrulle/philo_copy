@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   philo.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
+/*   By: Jdebrull <jdebrull@student.s19.be>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/27 16:01:18 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/04 18:19:23 by jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/07 19:58:31 by Jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,5 +60,8 @@ void	exit_error(char *str);
 long	get_time(void);
 void	ft_usleep(t_philo *philo, long	time_ms);
 int		check_death(t_philo *philo);
+void	safe_print(t_philo *philo, const char *status);
+void	free_list(t_philo *philo);
+void	clean_table(t_table *table);
 
 #endif
