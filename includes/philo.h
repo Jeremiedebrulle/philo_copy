@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   philo.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: Jdebrull <jdebrull@student.s19.be>         +#+  +:+       +#+        */
+/*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/27 16:01:18 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/07 19:58:31 by Jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/09 15:02:17 by jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ typedef struct s_philo
 	pthread_t		philo_thread;
 	pthread_mutex_t	*left_fork;
 	pthread_mutex_t	*right_fork;
+	int				forks_taken;
 	int				meals_count;
 	long			time_last_meal;
 	struct s_table	*table;
@@ -48,20 +49,34 @@ typedef struct s_table
 	pthread_mutex_t	table_lock;
 	pthread_mutex_t	*forks;
 	pthread_mutex_t	print_lock;
+	pthread_mutex_t	table_mtx;
 	pthread_t		monitor_death;
 	t_philo			*philo;
 }					t_table;
 
-int		only_digits(char *string);
-int		pars_input(char **av);
-
 //UTILS
-void	exit_error(char *str);
-long	get_time(void);
-void	ft_usleep(t_philo *philo, long	time_ms);
-int		check_death(t_philo *philo);
-void	safe_print(t_philo *philo, const char *status);
 void	free_list(t_philo *philo);
 void	clean_table(t_table *table);
+void	safe_print(t_philo *philo, const char *status);
+void	lone_philo(t_table *table);
+
+//INIT
+void	table_init(t_table *table, char **av);
+void	init_forks(t_table *table, int count);
+t_philo	*philo_init(t_table *table, int id);
+t_philo	*create_philos(t_table *table, int count);
+
+//START
+void	exit_error(char *str);
+long	get_time(void);
+void	ft_usleep(t_philo *philo, long time_ms);
+long	ft_atol_philo(char *str);
+
+//MONITORS
+void	time_last_meal(t_philo *philo);
+int		check_death(t_philo *philo);
+int		philo_died(t_philo *philo);
+int		philo_full(t_philo *philo);
+void	*monitor_death(void *arg);
 
 #endif

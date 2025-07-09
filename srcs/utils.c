@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   utils.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: Jdebrull <jdebrull@student.s19.be>         +#+  +:+       +#+        */
+/*   By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/30 17:47:06 by jdebrull          #+#    #+#             */
-/*   Updated: 2025/07/07 20:05:29 by Jdebrull         ###   ########.fr       */
+/*   Updated: 2025/07/09 15:06:52 by jdebrull         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ void	free_list(t_philo *philo)
 
 	if (!philo)
 		return ;
-	while(philo)
+	while (philo)
 	{
 		next = philo->next;
 		pthread_mutex_destroy(&philo->philo_lock);
@@ -44,49 +44,37 @@ void	clean_table(t_table *table)
 	free(table->forks);
 }
 
-void	exit_error(char *str)
+int	check_value(pthread_mutex_t *mtx, t_table *table)
 {
-	printf("%s\n", str);
-	exit(EXIT_FAILURE);
-}
-
-long	get_time(void)
-{
-	struct timeval	tv;
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * (long)1000 + tv.tv_usec / (long)1000);
-}
-
-int	check_death(t_philo *philo)
-{
-	int status;
-
-	pthread_mutex_lock(&philo->table->table_lock);
-	status = philo->table->death;
-	pthread_mutex_unlock(&philo->table->table_lock);
-	return (status);
-}
-
-void	ft_usleep(t_philo *philo, long	time_ms)
-{
-	long	start;
-
-	start = get_time();
-	if (check_death(philo))
-		return ;
-	while ((get_time() - start) < time_ms)
+	pthread_mutex_lock(mtx);
+	if (table->death)
 	{
-		if (check_death(philo))
-			break ;
-		usleep(100);
+		pthread_mutex_unlock(mtx);
+		return (0);
 	}
+	pthread_mutex_unlock(mtx);
+	return (1);
 }
 
 void	safe_print(t_philo *philo, const char *status)
 {
-    if (check_death(philo))
-        return;
-    pthread_mutex_lock(&philo->table->print_lock);
-    printf("%ld %d %s\n", get_time() - philo->table->start_sim, philo->philo_id, status);
-    pthread_mutex_unlock(&philo->table->print_lock);
+	if (check_death(philo))
+		return ;
+	pthread_mutex_lock(&philo->table->print_lock);
+	if (check_value(&philo->table->table_mtx, philo->table))
+	{
+		printf("%ld %d %s\n", get_time() - philo->table->start_sim,
+			philo->philo_id, status);
+	}
+	pthread_mutex_unlock(&philo->table->print_lock);
+}
+
+void	lone_philo(t_table *table)
+{
+	long	now;
+
+	now = get_time();
+	printf("%ld 1 has taken a fork\n", get_time() - now);
+	usleep(table->time_to_die * 1000);
+	printf("%ld 1 died\n", get_time() - now);
 }

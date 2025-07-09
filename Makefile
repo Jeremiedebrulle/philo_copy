@@ -3,20 +3,19 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: Jdebrull <jdebrull@student.s19.be>         +#+  +:+       +#+         #
+#    By: jdebrull <jdebrull@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/03/27 13:10:01 by jdebrull          #+#    #+#              #
-#    Updated: 2025/07/07 22:28:06 by Jdebrull         ###   ########.fr        #
+#    Updated: 2025/07/09 14:10:53 by jdebrull         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 SRCDIR = srcs/
 OBJDIR = objs
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -I./includes #-fsanitize=thread
+CFLAGS = -Wall -Wextra -Werror -I./includes -fsanitize=thread
 
-SRC = 	main.c \
-		utils.c
+SRC = 	main.c utils.c init.c start.c monitors.c
 
 SRCS = $(addprefix $(SRCDIR), $(SRC))
 OBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
